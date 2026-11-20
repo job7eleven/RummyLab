@@ -1,7 +1,10 @@
 <!doctype html>
 <!--
-  Job's Rummy C_4.3.0 — by JobLab (repo: jobs-rummy)
-  Uses rules engine 規則引擎_C_4.3.0.js (checked at start-up against RummyEngine.VERSION).
+  Job's Rummy C_4.6.0 — by JobLab (repo: jobs-rummy)
+  C_4.6.0: art phase 1 (美編參考/Final_美編提案.md): tile finish, colour marks, joker value badge, walnut rail,
+  player rack tray, wall ledges, steal / joker-swap trails, timer ring, keycap buttons. Game page only; the rules
+  engine stays C_4.5.0 (D21: only changed files get a new version).
+  Uses rules engine 規則引擎_C_4.5.0.js (checked at start-up against RummyEngine.VERSION).
   Key G_4.0.2 Enhancements:
   1. Non-Obstructing Side Player Badges: Left and Right computer badges are anchored in the outer upper margins completely outside both the Casino Trapezoid and the standing tile walls, never blocking the playing board.
   2. Multi-Game Series & Cumulative Scoring: Setup screen allows choosing the number of games (1, 2, 3, 5, or 10 games). Each game's end screen labels "第 X / Y 局結算", accumulates scores across games, and crowns the series champion.
@@ -12,7 +15,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Job's Rummy C_4.3.0 — by JobLab｜拉密四人透視牌局練習室</title>
+<title>Job's Rummy C_4.6.0 — by JobLab｜拉密四人透視牌局練習室</title>
 <style>
   :root {
     --felt: #1b5636;
@@ -30,10 +33,17 @@
     --gold: #ffcf33;
     --tile: #fcf9f0;
     --tile-edge: #cfc5ae;
-    --red: #d11f2a;
-    --blue: #1858cc;
-    --black: #18181b;
-    --orange: #e67e00;
+    /* C_4.6.0 (F2-1, 5-1): wider brightness gap between red and orange; second layer of tile thickness */
+    --red: #c8102e;
+    --blue: #1e4fbf;
+    --black: #1c1c1e;
+    --orange: #e88a00;
+    --tile-side: #d9cdb0;
+    --tile-side-dark: #a99a78;
+    --rail-wood-light: #8c5a30;
+    --rail-wood: #5e3a1c;
+    --rail-wood-dark: #2c1809;
+    --brass-soft: #c9a24a;
     --bad: #ff4d4d;
     --sel: #ffd400;
     --new: #38bdf8;
@@ -60,7 +70,10 @@
   #felt {
     height: 100%; display: flex; flex-direction: column; justify-content: space-between;
     border-radius: 16px; overflow: hidden; position: relative;
+    /* C_4.6.0 (F1-2): faint cloth grain (static noise image, rasterised once) and a warm overhead light */
     background:
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 .55 0'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)' opacity='.16'/%3E%3C/svg%3E"),
+      radial-gradient(ellipse 70% 55% at 50% 42%, rgba(255,246,214,.11) 0%, transparent 70%),
       radial-gradient(ellipse at 50% 58%, rgba(255,255,255,.06) 0%, transparent 60%),
       radial-gradient(ellipse at 50% 50%, var(--felt-light) 0%, var(--felt) 56%, var(--felt-dark) 100%);
     box-shadow:
@@ -250,6 +263,7 @@
     height: 100%;
     pointer-events: none;
     z-index: 1;
+    overflow: visible; /* C_4.6.0 (F1-1): the walnut rail extends past the trapezoid */
   }
   /* Fixed Point 1: Side badges sit in the upper-outer margin completely OUTSIDE the trapezoid and tile walls! */
   .side-pill-float {
@@ -319,6 +333,13 @@
   }
   .group.invalid .glabel { color: #ffb3b3; font-weight: 700; }
   .group.invalid .tile { box-shadow: 0 0 0 2px var(--bad), 0 3px 5px rgba(0,0,0,.45); }
+  /* C_4.6.0 (F2-5): an illegal group also gets a dashed frame (not colour alone) and shakes when ending the turn fails */
+  .group.invalid::after {
+    content: ""; position: absolute; left: -4px; right: -2px; top: -3px; bottom: -4px; pointer-events: none;
+    border: 2px dashed rgba(248,113,113,.95); border-radius: 7px;
+  }
+  .group.invalid.shake { animation: groupShake .32s ease-in-out 1; }
+  @keyframes groupShake { 0%,100% { translate: 0 0; } 25% { translate: -5px 0; } 50% { translate: 5px 0; } 75% { translate: -3px 0; } }
   .seam {
     position: absolute; top: 0;
     width: 8px;
@@ -370,22 +391,43 @@
     transform: perspective(210px) rotateX(11deg) skewX(var(--tile-skew, 0deg));
   }
 
-  /* Base Tile (on the board) */
+  /* Base Tile (on the board)
+     C_4.6.0 (F2-1): three-stage ivory finish, bright top cut, two-layer thickness (border + 1px shadow layer),
+     recessed dimple and engraved numerals. Shadows stay at two layers to keep dragging smooth on phones. */
   .tile {
     width: var(--tile-w); height: var(--tile-h); flex: none;
-    background: linear-gradient(180deg, #fffefb 0%, #faf5e8 82%, #ebe1c9 100%);
-    border: 1px solid #d4cab4; border-bottom: 4px solid #bcb094; border-radius: 5px;
+    background: linear-gradient(180deg, #fffefa 0%, #fbf7ec 38%, #f4ecda 80%, #e9dfc6 100%);
+    border: 1px solid #d4cab4; border-bottom: 4px solid var(--tile-side); border-radius: 5px;
     display: flex; align-items: center; justify-content: center; position: relative;
     font-weight: 800; font-size: var(--tile-font); cursor: grab; touch-action: none;
-    box-shadow: 0 3px 5px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.92);
+    font-variant-numeric: tabular-nums; letter-spacing: -0.02em;
+    text-shadow: 0 1px 0 rgba(255,255,255,.9), 0 -0.5px 0 rgba(0,0,0,.18);
+    box-shadow: 0 1px 0 var(--tile-side-dark), 0 4px 6px rgba(0,0,0,.42), inset 0 1.5px 0 rgba(255,255,255,.95);
     transition: transform .12s cubic-bezier(.2,.8,.3,1), box-shadow .12s;
   }
   .tile::before {
     content: ""; position: absolute; width: 72%; height: 50%; top: 20%; border-radius: 50%;
-    background: radial-gradient(circle at 50% 30%, rgba(0,0,0,.035), rgba(255,255,255,.5) 75%, transparent);
+    background: radial-gradient(circle at 50% 30%, rgba(0,0,0,.05), rgba(255,255,255,.55) 75%, transparent);
+    box-shadow: inset 0 1.5px 2px rgba(0,0,0,.06), inset 0 -1px 1px rgba(255,255,255,.85);
     pointer-events: none;
   }
   .tile > span, .tile > svg { position: relative; z-index: 1; }
+  /* C_4.6.0 (F2-3): colour mark in the top-left corner, so the four colours can be told apart without colour */
+  .tile > i.pip {
+    position: absolute; left: 8%; top: 6%; width: 21%; aspect-ratio: 1; z-index: 1;
+    background: currentColor; opacity: .82; pointer-events: none;
+  }
+  .tile.c-red > i.pip { border-radius: 50%; }
+  .tile.c-blue > i.pip { width: 18%; border-radius: 1px; }
+  .tile.c-black > i.pip { clip-path: polygon(50% 4%, 100% 96%, 0 96%); }
+  .tile.c-orange > i.pip { clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%); }
+  /* C_4.6.0 (F2-2): value a table joker stands for, bottom-right corner */
+  .tile > b.jk-val {
+    position: absolute; right: -4px; bottom: -4px; z-index: 2; min-width: 1.45em; height: 1.45em;
+    padding: 0 .2em; border-radius: .75em; font-size: 52%; line-height: 1.45em; text-align: center;
+    background: linear-gradient(180deg, #fde68a, #d4a017); color: #3b2500; text-shadow: none;
+    border: 1px solid rgba(120,80,0,.55); box-shadow: 0 1px 2px rgba(0,0,0,.35); pointer-events: none;
+  }
   .tile.c-red { color: var(--red); }
   .tile.c-blue { color: var(--blue); }
   .tile.c-black { color: var(--black); }
@@ -399,11 +441,20 @@
     box-shadow: 0 0 0 3px var(--sel), 0 10px 16px rgba(0,0,0,.62) !important;
     z-index: 4;
   }
+  /* C_4.6.0 (F2-5): the "moved from hand this turn" dot sits top-right, leaving top-left for the colour mark */
   .tile.new::after {
-    content: ""; position: absolute; top: 3px; left: 3px; width: 6px; height: 6px;
+    content: ""; position: absolute; top: 3px; right: 3px; width: 6px; height: 6px;
     border-radius: 50%; background: var(--new); box-shadow: 0 0 4px var(--new);
   }
-  .tile.cpu { box-shadow: 0 0 0 2.5px #ffb300, 0 4px 7px rgba(0,0,0,.52); }
+  /* C_4.6.0 (F2-5): tiles the computers just played get a soft gold under-glow instead of an orange ring */
+  .tile.cpu { box-shadow: 0 0 0 1.5px rgba(255,196,60,.95), 0 1px 0 var(--tile-side-dark), 0 6px 12px rgba(255,180,30,.55); }
+  /* C_4.6.0 (F2-5): newly drawn rack tiles: thin blue outline until sorted; a "新" tag for the first 2 seconds */
+  #rack .tile.pend { box-shadow: inset 0 0 0 1.5px rgba(56,189,248,.85), 1px 0 2px rgba(0,0,0,.22); }
+  #rack .tile.fresh::after {
+    content: "新"; position: absolute; top: 2px; right: 2px; left: auto; width: auto; height: auto;
+    padding: 0 3px; border-radius: 4px; font-size: 10px; line-height: 14px; font-weight: 800;
+    color: #fff; background: #0ea5e9; text-shadow: none; box-shadow: 0 1px 2px rgba(0,0,0,.3); z-index: 2;
+  }
   .tile.drawn { box-shadow: 0 0 0 2.5px var(--new), 0 4px 7px rgba(0,0,0,.52); }
   .tile.coach-glow {
     box-shadow: 0 0 0 3px var(--xray), 0 0 14px rgba(52,211,153,.85) !important;
@@ -437,6 +488,29 @@
   }
   #timer { font-variant-numeric: tabular-nums; font-weight: 700; color: #fff; background: rgba(0,0,0,.32); padding: 1px 8px; border-radius: 10px; }
   #timer.warn { color: #fecaca; background: rgba(185,28,28,.75); animation: pulseText .5s infinite alternate; }
+  /* C_4.6.0 (F6-2): countdown ring; amber from 15 s, red and pulsing from 5 s */
+  #timer { display: inline-flex; align-items: center; gap: 5px; padding: 2px 9px 2px 4px; }
+  #timer .tring { width: 18px; height: 18px; transform: rotate(-90deg); }
+  #timer .tring circle { fill: none; stroke-width: 3; }
+  #timer .tring .bg { stroke: rgba(255,255,255,.22); }
+  #timer .tring .fg { stroke: #34d399; stroke-linecap: round; transition: stroke-dashoffset .25s linear, stroke .3s; }
+  #timer.amber { color: #fde68a; }
+  #timer.amber .tring .fg { stroke: #f59e0b; }
+  #timer.warn .tring .fg { stroke: #f87171; }
+
+  /* C_4.6.0 (F5-1): steal / joker-swap trail */
+  #trailLayer { position: fixed; inset: 0; width: 100vw; height: 100vh; pointer-events: none; z-index: 79; overflow: visible; }
+  .take-trail {
+    fill: none; stroke: #ffd76a; stroke-width: 3; stroke-dasharray: 8 6; stroke-linecap: round;
+    filter: drop-shadow(0 0 3px rgba(255,200,60,.8)); opacity: 0; transition: opacity .25s;
+  }
+  .take-trail.on { opacity: .95; }
+  .take-ripple {
+    position: fixed; z-index: 81; width: 46px; height: 46px; margin: -23px 0 0 -23px; border-radius: 50%; pointer-events: none;
+    border: 3px solid #f59e0b; box-shadow: 0 0 14px rgba(245,158,11,.85);
+    animation: takeRipple 300ms ease-out forwards;
+  }
+  @keyframes takeRipple { from { transform: scale(.45); opacity: 1; } to { transform: scale(1.5); opacity: 0; } }
   @keyframes pulseText { from { opacity: .6; } to { opacity: 1; } }
 
   #rackRow {
@@ -465,6 +539,28 @@
   body.has-sel #rackArea, body.dragging #rackArea {
     background: rgba(0,0,0,.14);
     border-color: rgba(255,212,0,.38);
+  }
+  /* C_4.6.0 (F3-1): walnut rack. ::before is the back board behind the tiles, ::after the front lip that covers
+     the foot of the tiles, so a selected tile (lifted 8px) looks pulled out of the groove. */
+  #rackArea::before, #rackArea::after { content: ""; position: absolute; left: 4px; right: 4px; pointer-events: none; }
+  #rackArea::before {
+    z-index: -1; bottom: -3px; height: calc(24px * var(--rack-scale, 1)); border-radius: 6px 6px 3px 3px;
+    background: linear-gradient(180deg, var(--rail-wood-light) 0%, var(--rail-wood) 55%, var(--rail-wood-dark) 100%);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.18), 0 8px 14px rgba(0,0,0,.5);
+  }
+  #rackArea::after {
+    z-index: 2; bottom: -9px; height: calc(13px * var(--rack-scale, 1)); border-radius: 3px 3px 7px 7px;
+    background:
+      linear-gradient(180deg, rgba(255,226,150,.55) 0, rgba(255,226,150,.55) 1.5px, transparent 1.5px),
+      linear-gradient(180deg, #7a4a24 0%, var(--rail-wood) 45%, var(--rail-wood-dark) 100%);
+    box-shadow: 0 3px 6px rgba(0,0,0,.55), inset 0 -1px 0 rgba(0,0,0,.35);
+  }
+  /* C_4.6.0 (F3-2): brass divider pin in the gap before the newly drawn tiles */
+  .slot.gap.pend-gap { position: relative; }
+  .slot.gap.pend-gap::after {
+    content: ""; position: absolute; left: 50%; bottom: 4px; width: 4px; height: 58%; transform: translateX(-50%);
+    border-radius: 2px; background: linear-gradient(90deg, #8a6a1c, #f5d77a 45%, #b8892a);
+    box-shadow: 0 1px 2px rgba(0,0,0,.5);
   }
   #rack {
     width: 100%;
@@ -522,6 +618,7 @@
   }
   /* C_4.3.0: selecting a tile must not change slot widths (the rack would grow and every tile would shift);
      the selected tile only lights up and lifts, drop targets only change colour. */
+  #lblTriple.off { opacity: .45; cursor: not-allowed; }
   body.has-sel .slot { background: rgba(255,212,0,.22); cursor: copy; }
   .slot.drop-hover { background: var(--sel) !important; box-shadow: 0 0 0 2px var(--sel); }
 
@@ -577,6 +674,29 @@
   }
   .act:hover:not(:disabled) { filter: brightness(1.05); }
   .act:active:not(:disabled) { transform: translateY(2px); box-shadow: 0 1px 0 #8c826d; }
+  /* C_4.6.0 (F6-3): keycap face: slightly concave top (inner light at the top, shade at the bottom) on a 4px base */
+  .act { position: relative; min-height: 44px; isolation: isolate; } /* isolate: the face sits under the label */
+  .act::before {
+    content: ""; position: absolute; z-index: -1; inset: 3px 4px 5px; border-radius: 10px; pointer-events: none;
+    background: linear-gradient(180deg, rgba(0,0,0,.06), rgba(255,255,255,0) 45%, rgba(255,255,255,.35));
+    box-shadow: inset 0 1px 2px rgba(0,0,0,.12);
+  }
+  .act:disabled::before { display: none; }
+  /* ready states breathe gently so the change of role is noticed */
+  #btnSort.play-ready:not(:disabled) { animation: keyBreatheGreen 1.6s ease-in-out infinite; }
+  #btnEnd.primary.ready:not(:disabled) { animation: keyBreatheGold 1.6s ease-in-out infinite; }
+  @keyframes keyBreatheGreen {
+    0%, 100% { box-shadow: 0 3px 0 #065f46, 0 0 8px rgba(52,211,153,.45), 0 4px 10px rgba(0,0,0,.42); }
+    50% { box-shadow: 0 3px 0 #065f46, 0 0 18px rgba(52,211,153,.95), 0 4px 10px rgba(0,0,0,.42); }
+  }
+  @keyframes keyBreatheGold {
+    0%, 100% { box-shadow: 0 3px 0 #8a6500, 0 0 8px rgba(255,215,64,.45), 0 4px 10px rgba(0,0,0,.42); }
+    50% { box-shadow: 0 3px 0 #8a6500, 0 0 18px rgba(255,215,64,.95), 0 4px 10px rgba(0,0,0,.42); }
+  }
+  /* C_4.6.0: reduced motion: no breathing, shaking or pulsing */
+  @media (prefers-reduced-motion: reduce) {
+    #btnSort.play-ready:not(:disabled), #btnEnd.primary.ready:not(:disabled), .group.invalid.shake, #timer.warn { animation: none; }
+  }
   .act:disabled {
     opacity: .78;
     background: linear-gradient(180deg, #cbd5e1, #94a3b8) !important;
@@ -836,6 +956,12 @@
     margin-top: 1px;
     line-height: 1.2;
   }
+  /* C_4.6.0 (F2-4): result-screen joker shows the jester icon above its penalty tag */
+  .tile.joker { flex-direction: column; gap: 1px; }
+  .tile.joker .joker-svg { width: 60%; height: auto; }
+  /* C_4.6.0 (F2-4): red joker trimmed in gold, black joker in silver */
+  .tile .joker-svg .jk-ring { stroke: #d4a017; }
+  .tile.j-black .joker-svg .jk-ring { stroke: #9aa4b2; }
 
 </style>
 </head>
@@ -845,7 +971,7 @@
   <div id="topZone">
     <div id="infoBox">
       <div class="info-row-1">
-        <span class="brand-title">Job's Rummy C_4.3.0</span>
+        <span class="brand-title">Job's Rummy C_4.6.0</span>
         <span class="brand-by">by JobLab</span>
       </div>
       <div class="info-row-2" id="brandSub">第 1 / 3 局</div>
@@ -859,6 +985,7 @@
         <button class="mini-btn" id="btnUndo" title="退回上一步（Ctrl+Z）" disabled>↶</button>
         <button class="mini-btn" id="btnRedo" title="重做下一步（Ctrl+Y）" disabled>↷</button>
         <button class="mini-btn" id="btnNew" title="開啟設定、音效與數據/資訊頁面">⚙️ 設定</button>
+        <button class="mini-btn" id="btnFullscreen" title="進入／離開全螢幕" hidden>⛶ 全螢幕</button>
         <button class="mini-btn coach-btn" id="btnShowResult" hidden title="返回本局結算畫面或進入下一局">🏆 結算/下一局</button>
       </div>
     </div>
@@ -912,7 +1039,7 @@
 <div id="ghost"></div>
 
 <div class="overlay" id="info"><div class="card">
-  <h2>Job's Rummy 牌局資訊與數據統計（C_4.3.0｜by JobLab）</h2>
+  <h2>Job's Rummy 牌局資訊與數據統計（C_4.6.0｜by JobLab）</h2>
   <dl class="facts" id="infoFacts"></dl>
   <h3>📊 真人操作數據統計（本回合 vs 電腦設定比對）</h3>
   <div id="infoTelemetry"></div>
@@ -931,7 +1058,7 @@
 
 <div class="overlay" id="setup"><div class="card">
   <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:6px">
-    <h2 style="margin:0">⚙️ Job's Rummy 設定（C_4.3.0 <small style="font-size:13px;color:#64748b;font-weight:600">by JobLab</small>）</h2>
+    <h2 style="margin:0">⚙️ Job's Rummy 設定（C_4.6.0 <small style="font-size:13px;color:#64748b;font-weight:600">by JobLab</small>）</h2>
     <div style="display:flex;gap:8px;align-items:center">
       <button type="button" class="small" id="btnSetupSound" data-act="toggle-sound" title="快速切換音效">🔊 聲音：開啟</button>
       <button type="button" class="small" data-act="openinfo" style="background:#eff6ff;border-color:#93c5fd;color:#1d4ed8;font-weight:700">📊 數據/資訊</button>
@@ -968,7 +1095,8 @@
     <div class="row" id="rowTimer"><span class="lbl">每回合秒數</span><input type="range" data-cfg="turnSeconds" min="30" max="180" step="10"><output data-out="turnSeconds"></output></div>
     <div class="row"><label><input type="checkbox" data-cfg="poolCountBonus"> 是否計算牌池剩餘張數獎勵</label></div>
     <div class="row"><label><input type="checkbox" data-cfg="resetPenalty"> 「拆牌、重組」後重設要罰抽牌</label></div>
-    <div class="row"><label><input type="checkbox" data-cfg="sameColorTriple"> 三同色（例如 紅1＋紅1＋百搭）</label></div>
+    <div class="row"><label><input type="checkbox" data-cfg="useJokers"> 使用萬用牌（不使用時牌組共 104 張）</label></div>
+    <div class="row"><label id="lblTriple"><input type="checkbox" data-cfg="sameColorTriple"> 三同色（例如 紅1＋紅1＋百搭，需使用萬用牌）</label></div>
     <details>
       <summary>進階規則</summary>
       <div class="row"><span class="lbl">起始手牌張數</span><input type="range" data-cfg="handSize" min="7" max="20" step="1"><output data-out="handSize"></output></div>
@@ -992,6 +1120,8 @@
     <div class="row"><label><input type="checkbox" data-cfg="showDrawButton"> 右下角抽牌按鍵</label></div>
     <div class="row" id="rowPenaltyWarn"><label><input type="checkbox" data-cfg="showPenaltyWarning"> 是否顯示罰牌警語</label></div>
     <div class="row"><label><input type="checkbox" data-cfg="soundEnabled"> 啟用擬真牌桌音效</label></div>
+    <div class="row"><label><input type="checkbox" data-cfg="autoFullscreen"> 進入遊戲時自動全螢幕（第一次點擊或按鍵時切換）</label></div>
+    <div class="row"><label><input type="checkbox" data-cfg="colorMarks"> 牌面顏色形狀標記（紅● 藍■ 黑▲ 橘◆，方便辨色）</label></div>
     <div class="row"><label><input type="checkbox" data-cfg="showLabels"> 牌組顯示名稱與點數</label></div>
     <div class="row"><label><input type="checkbox" data-cfg="xrayEnabled"> 啟用「牌感雷達」</label></div>
   </fieldset>
@@ -1027,10 +1157,10 @@
   </div>
 </div></div>
 
-<script>/* 規則引擎 C_4.3.0（發布版內嵌，原始檔：規則引擎_C_4.3.0.js） */
+<script>/* 規則引擎 C_4.5.0（發布版內嵌，原始檔：規則引擎_C_4.5.0.js） */
 /*
  * Rummikub single-player practice - rules engine
- * Version: C_4.3.0 (based on G_4.2.2 / G_4.1.0 / G_4.0.x / G_3.5.0 / C_3.4.0)
+ * Version: C_4.5.0 (based on C_4.4.0 / C_4.3.0 / G_4.2.2 / G_4.1.0 / G_4.0.x / G_3.5.0 / C_3.4.0)
  *
  * Pure functions only: no DOM access, no hidden global state.
  * Loaded by both the game page and the rule test page via a plain <script> tag
@@ -1070,6 +1200,7 @@
     iceBreakPoints: 30,     // minimum points for the first meld
     jokerPenalty: 30,       // points a joker counts for when left in hand
     penaltyDraw: 3,         // tiles drawn after a failed rearrangement
+    useJokers: true,        // C_4.4.0: false deals a 104-tile deck without the two jokers (setup option)
     sameColorTriple: false, // house rule: 3 tiles of one number and one colour (needs a joker, e.g. R1 R1 J)
     masterSteal: true,      // backward-compatible toggle for 1-tile table steal + 2 tiles ("拆組出牌(2張)", T19)
     steal2Enabled: true,    // enable "拆組出牌(2張)" when computer rolls play2
@@ -1082,6 +1213,14 @@
     reliefPerTableTile: 0.002,// draw relief per tile on the table
     extendBase: 3,            // extension patterns are weighted by G / (G + extendBase), G = groups on the table
     pairSameGroup: 0.7,       // when playing 2 tiles, chance to try putting both on one group first
+    // C_4.5.0 (P4, 設計草案_真人出牌型式分析.html): pattern multipliers by hand size and run of draws.
+    habitBigHand: 11,         // hand of this size or more counts as "big"
+    habitDrawStreak: 3,       // or this many draws in a row
+    habitBigPlay3: 1.3,
+    habitBigPlay4: 2.0,
+    habitSmallHand: 6,        // hand of this size or less counts as "small"
+    habitSmallPlay1: 1.5,
+    habitSmallPlay4: 0.5,
   });
 
   // User-facing messages (Traditional Chinese) keyed by error / reason code.
@@ -1107,11 +1246,15 @@
 
   // Computer personas calibrated in G_4.1.1 against 3-game real human telemetry
   // (Human benchmark: play1 25%, play2 36%, play3 18%, play4+ 14%, foul 7%):
+  // C_4.5.0 (P1-P3, 設計草案_真人出牌型式分析.html): b cut to about a third and a playStall per persona, so the computers
+  // depend less on the other players and can play again after their own play; pattern weights follow the owner's
+  // 9 games (more single tiles and 4+ plays, fewer pairs). Values tuned by four-computer simulation to keep the
+  // game length and the relative strength of the personas of C_4.4.0.
   const PERSONAS = Object.freeze([
-    { id: 'apprentice', name: '迷糊學徒', desc: '常卡住、出小牌、偶爾簡單拆組與犯規', simTurns: 56, k: 0.025, b: 0.20, steal2Prob: 0.35, jokerSwapProb: 0.25, patterns: { play1: 42, play2: 24, play3: 22, play4: 5, foul: 7 } },
-    { id: 'steady', name: '穩健牌友', desc: '節奏平均，貼近真人拆組與出牌習慣', simTurns: 41, k: 0.030, b: 0.25, steal2Prob: 0.85, jokerSwapProb: 0.60, patterns: { play1: 30, play2: 35, play3: 21, play4: 11, foul: 3 } },
-    { id: 'gambler', name: '冒險賭徒', desc: '極愛拆組與出大牌，桌面牌多時易犯規', simTurns: 35, k: 0.032, b: 0.27, steal2Prob: 0.90, jokerSwapProb: 0.75, patterns: { play1: 18, play2: 30, play3: 26, play4: 18, foul: 8 } },
-    { id: 'master', name: '拉密宗師', desc: '不易卡住、極擅長拆組重編與多組連出、零失誤', simTurns: 25, k: 0.040, b: 0.32, steal2Prob: 1.00, jokerSwapProb: 1.00, patterns: { play1: 14, play2: 48, play3: 22, play4: 16, foul: 0 } },
+    { id: 'apprentice', name: '迷糊學徒', desc: '常卡住、出小牌、偶爾簡單拆組與犯規', simTurns: 56, k: 0.025, b: 0.064, playStall: 0.75, steal2Prob: 0.35, jokerSwapProb: 0.25, patterns: { play1: 48, play2: 22, play3: 18, play4: 5, foul: 7 } },
+    { id: 'steady', name: '穩健牌友', desc: '節奏平均，貼近真人拆組與出牌習慣', simTurns: 41, k: 0.030, b: 0.08, playStall: 0.65, steal2Prob: 0.85, jokerSwapProb: 0.60, patterns: { play1: 35, play2: 33, play3: 17, play4: 12, foul: 3 } },
+    { id: 'gambler', name: '冒險賭徒', desc: '極愛拆組與出大牌，桌面牌多時易犯規', simTurns: 35, k: 0.032, b: 0.086, playStall: 0.70, steal2Prob: 0.90, jokerSwapProb: 0.75, patterns: { play1: 22, play2: 28, play3: 22, play4: 20, foul: 8 } },
+    { id: 'master', name: '拉密宗師', desc: '不易卡住、極擅長拆組重編與多組連出、零失誤', simTurns: 25, k: 0.040, b: 0.10, playStall: 0.58, steal2Prob: 1.00, jokerSwapProb: 1.00, patterns: { play1: 17, play2: 47, play3: 19, play4: 17, foul: 0 } },
   ]);
 
   // Counter-clockwise (逆時針) opponent seats around the table:
@@ -1163,7 +1306,7 @@
   // Deck and dealing
   // ---------------------------------------------------------------------------
 
-  function createDeck() {
+  function createDeck(config) {
     const deck = [];
     for (const color of COLORS) {
       for (let n = MIN_NUMBER; n <= MAX_NUMBER; n++) {
@@ -1172,6 +1315,7 @@
         }
       }
     }
+    if (config && config.useJokers === false) return deck;
     for (const id of JOKER_IDS) {
       deck.push({ id: id, color: null, number: null, isJoker: true });
     }
@@ -1195,7 +1339,7 @@
   function dealGame(seed, config) {
     const cfg = makeConfig(config);
     const oppCount = Math.max(1, Math.min(3, Number(cfg.opponents) || 1));
-    const deck = shuffle(createDeck(), createRng(seed));
+    const deck = shuffle(createDeck(cfg), createRng(seed));
     const playerHand = deck.slice(0, cfg.handSize);
     const computerHands = [];
     for (let i = 0; i < oppCount; i++) {
@@ -1675,8 +1819,11 @@
     return Math.min(cfg.reliefCap, k * handSize + cfg.reliefPerGroup * groups.length + cfg.reliefPerTableTile * tableTiles);
   }
 
-  function stallAfterTurn(action, handSize, k, board, drawnCount, config) {
-    if (action === 'play' || action === 'pass') return 1;
+  // C_4.5.0 (P1): after a play the stall is the persona's playStall (default 1, the old behaviour), so a computer
+  // that still holds playable tiles does not always wait for someone else to play first.
+  function stallAfterTurn(action, handSize, k, board, drawnCount, config, playStall) {
+    if (action === 'pass') return 1;
+    if (action === 'play') return typeof playStall === 'number' ? playStall : 1;
     return Math.pow(1 - drawRelief(handSize, k, board, config), drawnCount);
   }
 
@@ -1709,8 +1856,23 @@
     return Math.min(1.5, (t - 10) / 28);
   }
 
-  function choosePattern(patterns, handSize, groupCount, rng, config, restricted, tableTiles) {
+  // C_4.5.0 (P4): weight multipliers that follow the owner's habit of saving tiles and playing them in one go.
+  // A big hand or a long run of draws favours 3- and 4-tile plays; a small hand favours single tiles.
+  function patternHabit(handSize, drawStreak, config) {
     const cfg = makeConfig(config);
+    const m = { play1: 1, play2: 1, play3: 1, play4: 1, foul: 1 };
+    if (handSize >= cfg.habitBigHand || (drawStreak || 0) >= cfg.habitDrawStreak) {
+      m.play3 = cfg.habitBigPlay3; m.play4 = cfg.habitBigPlay4;
+    } else if (handSize <= cfg.habitSmallHand) {
+      m.play1 = cfg.habitSmallPlay1; m.play4 = cfg.habitSmallPlay4;
+    }
+    return m;
+  }
+
+  // ctx (optional, C_4.5.0): { drawStreak } turns on the P4 habit multipliers; without it the weights are used as is.
+  function choosePattern(patterns, handSize, groupCount, rng, config, restricted, tableTiles, ctx) {
+    const cfg = makeConfig(config);
+    const habit = ctx ? patternHabit(handSize, ctx.drawStreak, cfg) : null;
     const extFactor = groupCount / (groupCount + cfg.extendBase);
     const hasTableTiles = typeof tableTiles === 'number' && Number.isFinite(tableTiles);
     const foulMult = hasTableTiles ? foulFactorByTableTiles(tableTiles) : (groupCount < 2 ? 0 : 1);
@@ -1718,6 +1880,7 @@
     PATTERNS.forEach(function (p) {
       const n = PLAY_COUNT[p];
       let v = Math.max(0, patterns[p] || 0);
+      if (habit) v *= habit[p];
       if (n && n > handSize) v = 0;
       if (restricted) { if (!(n && n <= 2)) v = 0; }
       else {
@@ -1786,13 +1949,11 @@
   function takeTile(st, tile, from, rng) {
     if (from === 'pool') {
       st.pool.splice(st.pool.findIndex(function (t) { return t.id === tile.id; }), 1);
-      const jokerIdx = st.hand.findIndex(function (t) { return t.isJoker; });
-      let returnIdx;
-      if (jokerIdx >= 0 && (st.hand.length <= 6 || rng() < 0.75)) {
-        returnIdx = jokerIdx;
-      } else {
-        returnIdx = Math.floor(rng() * st.hand.length);
-      }
+      // C_4.4.0 (R5): the tile handed back is never a joker (unless the hand holds nothing else), so the computer
+      // keeps its own jokers instead of discarding them into the pool.
+      const natural = [];
+      st.hand.forEach(function (t, i) { if (!t.isJoker) natural.push(i); });
+      const returnIdx = natural.length ? natural[Math.floor(rng() * natural.length)] : Math.floor(rng() * st.hand.length);
       const back = st.hand.splice(returnIdx, 1)[0];
       st.pool.splice(Math.floor(rng() * (st.pool.length + 1)), 0, back);
     } else {
@@ -1889,6 +2050,9 @@
         for (const tl of leftCands) {
           for (const tr of rightCands) {
             if (tl.id === tr.id) continue;
+            // C_4.4.0 (R3): at least one side must take a duplicate of the tile across the cut; otherwise the two
+            // tiles just extend both ends of the run.
+            if (tl.number !== g[k].number && tr.number !== g[k - 1].number) continue;
             const newLeft = arrangeGroup(left.concat([tl]));
             const newRight = arrangeGroup([tr].concat(right));
             if (analyzeGroup(newLeft, config).valid && analyzeGroup(newRight, config).valid) {
@@ -1908,6 +2072,16 @@
     return moves;
   }
 
+  // C_4.4.0 (R3): taking the tail of a run and pairing it with n+1, n+2 (or the head with n-2, n-1) only cuts the run
+  // in two; the same tiles could simply extend it.
+  function extendsOutward(sp, pair) {
+    if (pair.some(function (t) { return t.color !== sp.tile.color; })) return false;
+    const ns = pair.map(function (t) { return t.number; }).sort(function (a, b) { return a - b; });
+    if (sp.splitType === 'run_tail') return ns[0] === sp.tile.number + 1;
+    if (sp.splitType === 'run_head') return ns[1] === sp.tile.number - 1;
+    return false;
+  }
+
   function addStealMeld(st, config, rng, allowed) {
     let spares = findStealableBoardTiles(st.board, config);
     if (allowed) spares = spares.filter(function (sp) { return allowed.indexOf(sp.group) >= 0; });
@@ -1915,7 +2089,7 @@
       const shuffledSpares = shuffle(spares, rng);
       for (const sp of shuffledSpares) {
         for (const from of ['pool', 'hand']) {
-          const pairs = findMatchingPairsForTile(sp.tile, st[from], config);
+          const pairs = findMatchingPairsForTile(sp.tile, st[from], config).filter(function (pr) { return !extendsOutward(sp, pr); });
           if (!pairs.length) continue;
           const chosenPair = pick(pairs, rng);
           const meld = arrangeGroup([sp.tile, chosenPair[0], chosenPair[1]]);
@@ -1997,17 +2171,17 @@
   // Item 7: Plays a 3-tile meld using 1 Joker + 2 natural tiles when neither player hand nor board has any jokers.
   function addJokerMeld3(st, config, rng) {
     if (st.hand.length < 3) return false;
+    // C_4.4.0 (R5): only a joker the computer really holds; never one picked from the pool.
     const handJoker = st.hand.find(function (t) { return t.isJoker; });
-    const poolJoker = st.pool.find(function (t) { return t.isJoker; });
     const jokerSources = [];
     if (handJoker) jokerSources.push({ joker: handJoker, jFrom: 'hand' });
-    if (poolJoker) jokerSources.push({ joker: poolJoker, jFrom: 'pool' });
     if (!jokerSources.length) return false;
 
     for (const js of jokerSources) {
       for (const from of ['hand', 'pool']) {
         const poolAfterJ = st[from].filter(function (t) { return t.id !== js.joker.id && !t.isJoker; });
-        const candidates = findJokerMelds3(js.joker, poolAfterJ, config);
+        // C_4.4.0 (R4): skip pairs that could simply extend a table group; the joker would be wasted.
+        const candidates = findJokerMelds3(js.joker, poolAfterJ, config).filter(function (c) { return !plainPlacement(c.pair, st.board, config); });
         if (!candidates.length) continue;
         const chosen = pick(candidates, rng);
         takeTile(st, js.joker, js.jFrom, rng);
@@ -2085,8 +2259,16 @@
       if (!melds.length) continue;
       const meld = arrangeGroup(pick(melds, rng));
       meld.forEach(function (t) { takeTile(st, t, from, rng); });
-      st.board.push(meld.slice());
-      st.moves.push({ type: 'new', tiles: meld, from: from });
+      // C_4.4.0 (R6): a new run that continues a run on the table is added to it instead of standing next to it.
+      const gi = st.board.findIndex(function (g) { return analyzeGroup(g.concat(meld), null).valid || analyzeGroup(meld.concat(g), null).valid; });
+      if (gi >= 0 && analyzeGroup(st.board[gi].concat(meld), null).valid) {
+        meld.forEach(function (t) { st.board[gi].push(t); st.moves.push({ type: 'extend', group: gi, end: 'end', tile: t, from: from }); });
+      } else if (gi >= 0) {
+        meld.slice().reverse().forEach(function (t) { st.board[gi].unshift(t); st.moves.push({ type: 'extend', group: gi, end: 'start', tile: t, from: from }); });
+      } else {
+        st.board.push(meld.slice());
+        st.moves.push({ type: 'new', tiles: meld, from: from });
+      }
       return true;
     }
     return false;
@@ -2099,9 +2281,17 @@
     st.moves.push({ type: 'extend', group: mv.group, end: mv.end, tile: mv.tile, from: from });
   }
 
+  // C_4.4.0 (R4): extensions the computer may use; none that leaves a joker redundant in its group.
+  function computerExtensions(board, sources, config) {
+    return findExtensions(board, sources, config).filter(function (e) {
+      const g = board[e.group];
+      return !jokerRedundant(e.end === 'start' ? [e.tile].concat(g) : g.concat([e.tile]), config);
+    });
+  }
+
   function addExtension(st, config, rng, allowed) {
     for (const from of ['pool', 'hand']) {
-      let ext = findExtensions(st.board, st[from], config);
+      let ext = computerExtensions(st.board, st[from], config);
       if (allowed) ext = ext.filter(function (e) { return allowed.indexOf(e.group) >= 0; });
       if (!ext.length) continue;
       applyExtension(st, pick(ext, rng), from, rng);
@@ -2116,7 +2306,7 @@
 
   function addPairSameGroup(st, config, rng, allowed) {
     for (const from of ['pool', 'hand']) {
-      let firsts = findExtensions(st.board, st[from], config);
+      let firsts = computerExtensions(st.board, st[from], config);
       if (allowed) firsts = firsts.filter(function (e) { return allowed.indexOf(e.group) >= 0; });
       firsts = shuffle(firsts, rng).slice(0, 60);
       for (const mv of firsts) {
@@ -2131,92 +2321,136 @@
     return false;
   }
 
+  // C_4.4.0 (R4): a joker is redundant when its group stays legal without it (e.g. B5 R5 K5 J). The computer never
+  // builds such a group; a human would swap the joker out instead.
+  function jokerRedundant(group, config) {
+    if (!group.some(function (t) { return t.isJoker; })) return false;
+    const real = group.filter(function (t) { return !t.isJoker; });
+    return real.length >= 3 && analyzeGroup(arrangeGroup(real), config).valid;
+  }
+
+  // C_4.4.0 (R1): places `tiles` on `board` with end-extensions and new groups only, never touching existing groups.
+  // Returns the moves ({ type: 'extend' | 'new' }) or null. Extensions are tried first, so tiles join existing runs
+  // instead of opening a separate group next to them (R6).
+  function plainPlacement(tiles, board, config) {
+    if (!tiles.length) return [];
+    const t = tiles[0], rest = tiles.slice(1);
+    for (let gi = 0; gi < board.length; gi++) {
+      for (const end of ['end', 'start']) {
+        const g2 = end === 'end' ? board[gi].concat([t]) : [t].concat(board[gi]);
+        if (!analyzeGroup(g2, config).valid || jokerRedundant(g2, config)) continue;
+        const b2 = board.slice();
+        b2[gi] = g2;
+        const sub = plainPlacement(rest, b2, config);
+        if (sub) return [{ type: 'extend', group: gi, end: end, tile: t }].concat(sub);
+      }
+    }
+    for (let k = 2; k <= rest.length; k++) {
+      for (const s of combinations(rest, k)) {
+        const meld = arrangeGroup([t].concat(s));
+        if (!analyzeGroup(meld, config).valid || jokerRedundant(meld, config)) continue;
+        const used = new Set(ids(s));
+        const sub = plainPlacement(rest.filter(function (x) { return !used.has(x.id); }), board.concat([meld]), config);
+        if (sub) return [{ type: 'new', tiles: meld }].concat(sub);
+      }
+    }
+    return null;
+  }
+
+  // C_4.4.0 (R1): a plan that rearranges the table (steal, run split, joker swap) is kept only when its tiles could
+  // not have been played without rearranging. Otherwise the same tiles are played the plain way; in a restricted turn
+  // the plain way must stay on the allowed groups, or the plan is dropped.
+  function keepReasonable(base, st, config, allowed) {
+    if (!st.moves.some(function (m) { return m.type === 'steal' || m.type === 'jokerSwap'; })) return st;
+    const plain = plainPlacement(st.played, base.board, config);
+    if (!plain) return st;
+    if (allowed && !plain.every(function (m) { return m.type === 'extend' && allowed.indexOf(m.group) >= 0; })) return null;
+    const board = base.board.map(function (g) { return g.slice(); });
+    plain.forEach(function (m) {
+      if (m.type === 'new') board.push(m.tiles.slice());
+      else if (m.end === 'start') board[m.group].unshift(m.tile);
+      else board[m.group].push(m.tile);
+    });
+    return { board: board, pool: st.pool, hand: st.hand, moves: plain, played: st.played };
+  }
+
   function tryPlay(base, n, config, rng, allowed, canSteal, stealProb, canUseJoker, jokerSwapProb) {
     if (base.hand.length < n) return null;
-    const st = { board: base.board.map(function (g) { return g.slice(); }), pool: base.pool.slice(), hand: base.hand.slice(), moves: [], played: [] };
-    let ok = false;
+    const fresh = function () {
+      return { board: base.board.map(function (g) { return g.slice(); }), pool: base.pool.slice(), hand: base.hand.slice(), moves: [], played: [] };
+    };
     const pSteal = typeof stealProb === 'number' ? stealProb : 0.85;
     const isMasterLike = pSteal >= 0.95;
     // Item 8: For Master (steal2Prob >= 0.95), allow scanning the full board for steal opportunities
     const stealAllowed = isMasterLike ? null : allowed;
+    // C_4.4.0 (R2): ordinary plays (extensions and new groups) come first; rearranging the table, taking a joker back
+    // and playing an own joker are fallbacks when the ordinary way cannot reach n tiles. The persona's steal chance is
+    // now "finds and accepts a needed rearrangement", not "prefers rearranging".
+    let st = null;
 
     if (n >= 3) {
       if (allowed) return null;
-      // C_4.3.0: with a joker on the table, try to take it back first (3 tiles; for n = 4 plus one extension).
-      const tableHasJoker = base.board.some(function (g) { return g.some(function (t) { return t.isJoker; }); });
-      if (tableHasJoker && rng() < (jokerSwapProb || 0)) {
-        const sw = cloneState(st);
-        if (addJokerSwap(sw, config, rng) && (n === 3 || addExtension(sw, config, rng, null))) {
-          Object.assign(st, sw);
-          ok = true;
-        }
-      }
-      // Item 8: When Master rolls n=3 or n=4 and board has stealable tiles, prioritize a Steal+Extension combo so Master frequently demonstrates 拆組出牌!
-      if (!ok && canSteal && isMasterLike && base.board.length > 0 && rng() < 0.65) {
-        const stCombo = { board: base.board.map(function (g) { return g.slice(); }), pool: base.pool.slice(), hand: base.hand.slice(), moves: [], played: [] };
-        if (n === 3 && addStealMeld(stCombo, config, rng, null)) {
-          addExtension(stCombo, config, rng, null);
-          Object.assign(st, stCombo);
-          ok = true;
-        } else if (n === 4 && addStealMeld(stCombo, config, rng, null) && (addStealMeld(stCombo, config, rng, null) || (base.hand.length >= 5 && addMeld(stCombo, 3, rng)) || addExtension(stCombo, config, rng, null))) {
-          // C_4.3.0 (T27): steal 2 + new group of 3 is 5 tiles, only allowed with at least 5 tiles in hand.
-          Object.assign(st, stCombo);
-          ok = true;
-        }
-      }
-      // Item 7: If eligible to use Joker (neither player hand nor board has a joker), try playing a 3-tile Joker meld when n===3 and (hand has joker or rng() < 0.45)
-      if (!ok && n === 3 && canUseJoker && (base.hand.some(function (t) { return t.isJoker; }) || rng() < 0.45)) {
-        ok = addJokerMeld3(st, config, rng);
-      }
       // G_4.1.1: When n === 4 and hand is large (>= 8 tiles), 35% chance to attempt a 5-6 tile burst (3+3 or 3+2)
-      if (!ok && n === 4 && base.hand.length >= 8 && rng() < 0.35) {
-        const burst = { board: base.board.map(function (g) { return g.slice(); }), pool: base.pool.slice(), hand: base.hand.slice(), moves: [], played: [] };
-        if (addMeld(burst, 3, rng) && (addMeld(burst, 3, rng) || (addExtension(burst, config, rng) && addExtension(burst, config, rng)))) {
-          Object.assign(st, burst);
-          ok = true;
+      if (n === 4 && base.hand.length >= 8 && rng() < 0.35) {
+        const burst = fresh();
+        if (addMeld(burst, 3, rng) && (addMeld(burst, 3, rng) || (addExtension(burst, config, rng) && addExtension(burst, config, rng)))) st = burst;
+      }
+      if (!st) {
+        const plain = fresh();
+        if (addMeld(plain, n, rng)) st = plain;
+      }
+      if (!st && n === 4) {
+        const sub = fresh();
+        if (addMeld(sub, 3, rng) && addExtension(sub, config, rng)) st = sub;
+      }
+      // C_4.3.0: with a joker on the table, try to take it back (3 tiles; for n = 4 plus one extension).
+      const tableHasJoker = base.board.some(function (g) { return g.some(function (t) { return t.isJoker; }); });
+      if (!st && tableHasJoker && rng() < (jokerSwapProb || 0)) {
+        const sw = fresh();
+        if (addJokerSwap(sw, config, rng) && (n === 3 || addExtension(sw, config, rng, null))) st = sw;
+      }
+      // Item 8: Master combines a steal with an extension (n = 3) or with a second steal / new group / extension (n = 4).
+      // C_4.4.0 (R7): every step must succeed, otherwise the combo is not used.
+      if (!st && canSteal && isMasterLike && base.board.length > 0 && rng() < 0.65) {
+        const combo = fresh();
+        if (n === 3 && addStealMeld(combo, config, rng, null) && addExtension(combo, config, rng, null)) st = combo;
+        else if (n === 4 && addStealMeld(combo, config, rng, null) && (addStealMeld(combo, config, rng, null) || (base.hand.length >= 5 && addMeld(combo, 3, rng)) || addExtension(combo, config, rng, null))) {
+          // C_4.3.0 (T27): steal 2 + new group of 3 is 5 tiles, only allowed with at least 5 tiles in hand.
+          st = combo;
         }
       }
-      if (!ok) ok = addMeld(st, n, rng);
-      if (!ok && n === 3 && canUseJoker) {
-        ok = addJokerMeld3(st, config, rng);
-      }
-      if (!ok && n === 4) {
-        const sub = { board: base.board.map(function (g) { return g.slice(); }), pool: base.pool.slice(), hand: base.hand.slice(), moves: [], played: [] };
-        if (addMeld(sub, 3, rng) && addExtension(sub, config, rng)) {
-          Object.assign(st, sub);
-          ok = true;
-        }
+      // Item 7: a joker from the computer's own hand with 2 tiles (C_4.4.0: only when the ordinary ways failed).
+      if (!st && n === 3 && canUseJoker) {
+        const jm = fresh();
+        if (addJokerMeld3(jm, config, rng)) st = jm;
       }
     } else {
-      const effStealProb = isMasterLike ? 1.0 : (allowed ? (pSteal * 0.65) : pSteal);
-      const wantedSteal = (n === 2 && canSteal && config.pairSameGroup < 1 && rng() < effStealProb);
-      if (wantedSteal) {
-        ok = addStealMeld(st, config, rng, stealAllowed);
+      if (n === 2 && rng() < config.pairSameGroup) {
+        const pair = fresh();
+        if (addPairSameGroup(pair, config, rng, allowed)) st = pair;
       }
-      const allowPureExtend2 = (n !== 2) || (config.pairSameGroup >= 1) || (!wantedSteal && rng() < 0.42) || isMasterLike;
-      if (!ok && n === 2 && allowPureExtend2 && rng() < config.pairSameGroup) {
-        ok = addPairSameGroup(st, config, rng, allowed);
-      }
-      if (!ok && allowPureExtend2) {
-        const sub = { board: base.board.map(function (g) { return g.slice(); }), pool: base.pool.slice(), hand: base.hand.slice(), moves: [], played: [] };
+      if (!st) {
+        const sub = fresh();
         let extOk = true;
         for (let i = 0; i < n && extOk; i++) extOk = addExtension(sub, config, rng, allowed);
-        if (extOk) {
-          Object.assign(st, sub);
-          ok = true;
-        }
+        if (extOk) st = sub;
       }
-      if (!ok && n === 2 && canSteal) {
-        ok = addStealMeld(st, config, rng, stealAllowed);
+      const effStealProb = isMasterLike ? 1.0 : (allowed ? (pSteal * 0.65) : pSteal);
+      if (!st && n === 2 && canSteal && rng() < effStealProb) {
+        const sm = fresh();
+        if (addStealMeld(sm, config, rng, stealAllowed)) st = sm;
       }
-      if (!ok && !allowed && base.hand.length >= 3) {
-        ok = addMeld(st, 3, rng) || (canUseJoker && addJokerMeld3(st, config, rng));
+      if (!st && !allowed && base.hand.length >= 3) {
+        const m3 = fresh();
+        if (addMeld(m3, 3, rng) || (canUseJoker && addJokerMeld3(m3, config, rng))) st = m3;
       }
     }
+    if (!st) return null;
+    st = keepReasonable(base, st, config, allowed);
     // C_4.3.0 (T27): never play more tiles than the hand holds; a pool tile swapped against an empty hand
     // would put an undefined tile into the pool.
-    if (ok && (st.played.length > base.hand.length || st.pool.some(function (t) { return !t; }) || st.hand.some(function (t) { return !t; }))) return null;
-    return ok ? st : null;
+    if (!st || st.played.length > base.hand.length || st.pool.some(function (t) { return !t; }) || st.hand.some(function (t) { return !t; })) return null;
+    return st;
   }
 
   function planComputerTurn(args) {
@@ -2227,8 +2461,12 @@
     const units = args.opponentUnits || 0;
     const startStall = typeof args.stall === 'number' ? args.stall : cfg.stallStart;
     const stallBefore = stallAfterOpponent(startStall, units, persona.b);
-    const blocked = typeof args.forceBlocked === 'boolean' ? args.forceBlocked : rng() < stallBefore;
-    const restricted = units > 0 && (args.lastAction === 'play' || args.lastAction === 'pass');
+    // C_4.5.0 (P1): one roll decides both. Below stallBefore the computer is blocked; between stallBefore and
+    // startStall it was freed only by the opponents' changes, and after its own play such a turn is restricted
+    // (<= 2 tiles onto the groups others touched). Above startStall it would have played anyway, so it plays freely.
+    const roll = typeof args.forceBlocked === 'boolean' ? (args.forceBlocked ? 0 : stallBefore) : rng();
+    const blocked = roll < stallBefore;
+    const restricted = !blocked && units > 0 && roll < startStall && (args.lastAction === 'play' || args.lastAction === 'pass');
     const allowed = restricted ? (args.playerGroups || []) : null;
 
     const explicitDisable = (args.config && (args.config.masterSteal === false || args.config.steal2Enabled === false));
@@ -2258,7 +2496,7 @@
     if (blocked) {
       res = drawResult('draw', 1);
     } else {
-      pattern = args.forcePattern || choosePattern(persona.patterns, base.hand.length, base.board.length, rng, cfg, restricted, tableTileCount);
+      pattern = args.forcePattern || choosePattern(persona.patterns, base.hand.length, base.board.length, rng, cfg, restricted, tableTileCount, { drawStreak: args.drawStreak || 0 });
       if (pattern === 'foul') res = drawResult('foul', cfg.penaltyDraw);
       else {
         for (let n = PLAY_COUNT[pattern]; n >= 1 && !res; n--) {
@@ -2270,7 +2508,7 @@
       }
     }
 
-    const stall = stallAfterTurn(res.action, res.hand.length, persona.k, res.board, res.drawn.length, cfg);
+    const stall = stallAfterTurn(res.action, res.hand.length, persona.k, res.board, res.drawn.length, cfg, persona.playStall);
     return Object.assign(res, { pattern: pattern, blocked: blocked, restricted: restricted, stallBefore: stallBefore, stall: stall });
   }
 
@@ -2430,6 +2668,7 @@
       const hands = Array.from({ length: oppCount }, function () { return cfg.handSize; });
       const stalls = Array.from({ length: oppCount }, function () { return cfg.stallStart; });
       const lasts = Array.from({ length: oppCount }, function () { return null; });
+      const streaks = Array.from({ length: oppCount }, function () { return 0; });
       const pendingUnits = Array.from({ length: oppCount }, function () { return 0; });
       let groups = 0;
       let tableTiles = 0;
@@ -2457,15 +2696,16 @@
           const u = pendingUnits[c];
           pendingUnits[c] = 0;
           const sBefore = stallAfterOpponent(stalls[c], u, persona.b);
-          const blocked = rng() < sBefore;
-          const restricted = u > 0 && (lasts[c] === 'play' || lasts[c] === 'pass');
+          const roll = rng();
+          const blocked = roll < sBefore;
+          const restricted = !blocked && u > 0 && roll < stalls[c] && (lasts[c] === 'play' || lasts[c] === 'pass');
           let action = 'draw', drawn = 0;
 
           if (blocked) {
             if (pool > 0) { pool--; hands[c]++; drawn = 1; action = 'draw'; allPassed = false; }
             else action = 'pass';
           } else {
-            const pat = choosePattern(persona.patterns, hands[c], groups, rng, cfg, restricted, tableTiles);
+            const pat = choosePattern(persona.patterns, hands[c], groups, rng, cfg, restricted, tableTiles, { drawStreak: streaks[c] });
             if (pat === 'foul') {
               const d = Math.min(cfg.penaltyDraw, pool);
               if (d > 0) { pool -= d; hands[c] += d; drawn = d; action = 'foul'; allPassed = false; }
@@ -2493,8 +2733,9 @@
           const fakeBoard = Array.from({ length: groups }, function (_, i) {
             return i === 0 ? Array(Math.max(0, tableTiles - (groups - 1) * 3)).fill({}) : [{}, {}, {}];
           });
-          stalls[c] = stallAfterTurn(action, hands[c], persona.k, fakeBoard, drawn, cfg);
+          stalls[c] = stallAfterTurn(action, hands[c], persona.k, fakeBoard, drawn, cfg, persona.playStall);
           lasts[c] = action;
+          streaks[c] = action === 'play' ? 0 : streaks[c] + 1;
 
           if (hands[c] <= 0) {
             anyCleared = true;
@@ -2531,7 +2772,7 @@
   }
 
   // Every tile of the deck must exist exactly once across all zones.
-  function checkConservation(zones) {
+  function checkConservation(zones, config) {
     let all = [];
     const hasMultiHands = Array.isArray(zones.computerHands);
     Object.keys(zones).forEach(function (key) {
@@ -2553,12 +2794,13 @@
       if (seen.has(t.id)) duplicates.push(t.id);
       seen.add(t.id);
     });
-    const missing = ids(createDeck()).filter(function (id) { return !seen.has(id); });
-    return { ok: duplicates.length === 0 && missing.length === 0 && all.length === 106, total: all.length, duplicates: duplicates, missing: missing };
+    const deck = createDeck(config);
+    const missing = ids(deck).filter(function (id) { return !seen.has(id); });
+    return { ok: duplicates.length === 0 && missing.length === 0 && all.length === deck.length, total: all.length, duplicates: duplicates, missing: missing };
   }
 
   const RummyEngine = {
-    VERSION: 'C_4.3.0',
+    VERSION: 'C_4.5.0',
     COLORS: COLORS,
     DEFAULT_CONFIG: DEFAULT_CONFIG,
     MESSAGES: MESSAGES,
@@ -2595,9 +2837,12 @@
     changedGroups: changedGroups,
     foulFactorByTableTiles: foulFactorByTableTiles,
     choosePattern: choosePattern,
+    patternHabit: patternHabit,
     findMelds: findMelds,
     findJokerMelds3: findJokerMelds3,
     findJokerSwaps: findJokerSwaps,
+    plainPlacement: plainPlacement,
+    jokerRedundant: jokerRedundant,
     findExtensions: findExtensions,
     findStealableBoardTiles: findStealableBoardTiles,
     findMatchingPairsForTile: findMatchingPairsForTile,
@@ -2623,8 +2868,8 @@ const APP_ID = 'jobs-rummy';
 const REPO_NAME = 'jobs-rummy';
 const BRAND_NAME = 'JobLab';
 const GAME_NAME = "Job's Rummy";
-const APP_VERSION = 'C_4.3.0';
-const ENGINE_VERSION = 'C_4.3.0';
+const APP_VERSION = 'C_4.6.0';
+const ENGINE_VERSION = 'C_4.5.0';
 if (E && E.VERSION !== ENGINE_VERSION) console.warn("Job's Rummy expects engine " + ENGINE_VERSION + ' but loaded ' + E.VERSION);
 const STORAGE_KEY = 'jobs-rummy-config-v421';
 const GRID = { cols: 22, rows: 7 };
@@ -2680,7 +2925,8 @@ const Sound = (function () {
     win: function () {
       [523.25, 659.25, 783.99, 1046.5].forEach(function (f, i) { tone(f, 'triangle', 0.22, 0.14, i * 0.08); });
     },
-    error: function () { tone(190, 'sawtooth', 0.12, 0.09, 0, 140); tone(160, 'sawtooth', 0.15, 0.09, 0.1, 120); }
+    error: function () { tone(190, 'sawtooth', 0.12, 0.09, 0, 140); tone(160, 'sawtooth', 0.15, 0.09, 0.1, 120); },
+    tick: function () { tone(1500, 'square', 0.018, 0.035, 0, 1100); } // C_4.6.0 (F6-2): last 5 seconds
   };
 })();
 
@@ -2710,6 +2956,8 @@ const DEFAULT_CONFIG = Object.assign({}, E.DEFAULT_CONFIG, {
   showLabels: true,
   xrayEnabled: true,
   soundEnabled: true,
+  autoFullscreen: true,       // C_4.4.0: switch to full screen on the first tap or key press
+  colorMarks: true,           // C_4.6.0 (F2-3): shape mark per colour (red ●, blue ■, black ▲, orange ◆)
 });
 const FIXED_KEYS = ['stallStart', 'reliefCap', 'reliefPerGroup', 'reliefPerTableTile', 'extendBase', 'pairSameGroup'];
 
@@ -3325,6 +3573,12 @@ function buildTopWallPolys(count) {
       svg += '<polygon points="' + facePts + '" fill="#e4d8be" stroke="rgba(130,108,74,0.36)" stroke-width="' + (0.6 * tableRatio).toFixed(2) + '"/>';
     }
   }
+  // C_4.6.0 (F3-3): wooden ledge under the wall, drawn first so the tiles stand on it
+  const ly = baseLineY + 1.5 * tableRatio, lh = 5 * tableRatio, lp = 5 * tableRatio;
+  const ledge = '<polygon points="' + [pt(minX - lp, ly), pt(maxX + lp, ly), pt(maxX + lp * 0.6, ly - lh), pt(minX - lp * 0.6, ly - lh)].join(' ') +
+    '" style="fill:var(--rail-wood)" stroke="rgba(0,0,0,.35)" stroke-width="' + (0.6 * tableRatio).toFixed(2) + '"/>' +
+    '<line x1="' + (minX - lp * 0.6).toFixed(1) + '" y1="' + (ly - lh).toFixed(1) + '" x2="' + (maxX + lp * 0.6).toFixed(1) + '" y2="' + (ly - lh).toFixed(1) + '" stroke="rgba(255,226,150,.45)" stroke-width="' + (0.8 * tableRatio).toFixed(2) + '"/>';
+  svg = ledge + svg;
   return { svg: svg, minX: minX, maxX: maxX, topY: minTopY };
 }
 
@@ -3399,7 +3653,71 @@ function buildSideWallPolys(side, count) {
     ].join(' ');
     svg += '<polygon points="' + capPts + '" fill="' + (i === count - 1 ? '#d4c5a6' : '#d8cab0') + '" fill-opacity="' + (i === count - 1 ? '1' : '0.85') + '"/>';
   }
-  return svg;
+  // C_4.6.0 (F3-3): wooden ledge along the foot of the wall, drawn first so the tiles stand on it
+  const out = side === 'left' ? -1 : 1;
+  const footAt = u => {
+    const s = 0.80 + 0.22 * u;
+    const xIn = edgeX(u) + out * 14 * s * tableRatio;
+    const h = 26 * s * tableRatio;
+    return { xIn: xIn, xOut: xIn + out * 9.5 * s * tableRatio, y: edgeY(u) - h * 0.55 + h };
+  };
+  const a = footAt(startU - stepU * 0.15), b = footAt(startU + count * stepU);
+  const d = 3 * tableRatio;
+  const ledge = '<polygon points="' + [
+    pt(a.xIn - out * d, a.y + 4 * tableRatio), pt(a.xOut + out * d * 1.3, a.y + 1.5 * tableRatio),
+    pt(b.xOut + out * d * 1.3, b.y + 1.5 * tableRatio), pt(b.xIn - out * d, b.y + 4 * tableRatio),
+    pt(b.xIn - out * d, b.y - 1 * tableRatio), pt(a.xIn - out * d, a.y - 1 * tableRatio),
+  ].join(' ') + '" style="fill:var(--rail-wood)" stroke="rgba(0,0,0,.35)" stroke-width="' + (0.6 * tableRatio).toFixed(2) + '"/>';
+  return ledge + svg;
+}
+
+// C_4.6.0 (F1-1): beveled walnut rail around the trapezoid (lit top face, darker sides, darkest front face),
+// brass corner brackets, and an inner shadow along the far and side edges so the felt looks sunk into the table.
+function tableRailSvg(T, tr) {
+  const R = 10 * tr;
+  const pt = (x, y) => x.toFixed(1) + ',' + y.toFixed(1);
+  const TL = [T.xTL, T.yT], TR = [T.xTR, T.yT], BR = [T.xBR, T.yB], BL = [T.xBL, T.yB];
+  const oTL = [T.xTL - R, T.yT - R], oTR = [T.xTR + R, T.yT - R];
+  const oBR = [T.xBR + R * 1.15, T.yB + R * 0.9], oBL = [T.xBL - R * 1.15, T.yB + R * 0.9];
+  const poly = (ps, fill, extra) => '<polygon points="' + ps.map(p => pt(p[0], p[1])).join(' ') + '" fill="' + fill + '"' + (extra || '') + '/>';
+  let s = '<defs>' +
+    '<linearGradient id="railTop" x1="0" y1="0" x2="0" y2="1"><stop offset="0" style="stop-color:var(--rail-wood-light)"/><stop offset="1" style="stop-color:var(--rail-wood)"/></linearGradient>' +
+    '<linearGradient id="railL" x1="0" y1="0" x2="1" y2="0"><stop offset="0" style="stop-color:var(--rail-wood-dark)"/><stop offset="1" style="stop-color:var(--rail-wood)"/></linearGradient>' +
+    '<linearGradient id="railR" x1="1" y1="0" x2="0" y2="0"><stop offset="0" style="stop-color:var(--rail-wood-dark)"/><stop offset="1" style="stop-color:var(--rail-wood)"/></linearGradient>' +
+    '<linearGradient id="railB" x1="0" y1="0" x2="0" y2="1"><stop offset="0" style="stop-color:var(--rail-wood)"/><stop offset="1" style="stop-color:var(--rail-wood-dark)"/></linearGradient>' +
+    '<linearGradient id="shadeT" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#000" stop-opacity=".38"/><stop offset="1" stop-color="#000" stop-opacity="0"/></linearGradient>' +
+    '<linearGradient id="shadeL" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#000" stop-opacity=".3"/><stop offset="1" stop-color="#000" stop-opacity="0"/></linearGradient>' +
+    '<linearGradient id="shadeR" x1="1" y1="0" x2="0" y2="0"><stop offset="0" stop-color="#000" stop-opacity=".3"/><stop offset="1" stop-color="#000" stop-opacity="0"/></linearGradient>' +
+    '</defs>';
+  s += poly([oTL, oTR, TR, TL], 'url(#railTop)');
+  s += poly([oTL, TL, BL, oBL], 'url(#railL)');
+  s += poly([TR, oTR, oBR, BR], 'url(#railR)');
+  s += poly([BL, BR, oBR, oBL], 'url(#railB)');
+  // highlight on the outer edge of the rail
+  s += '<polyline points="' + [oBL, oTL, oTR, oBR].map(p => pt(p[0], p[1])).join(' ') + '" fill="none" stroke="rgba(255,230,180,.22)" stroke-width="' + (1 * tr).toFixed(2) + '"/>';
+  // inner shadow strips on the felt
+  const sh = 14 * tr;
+  const lerpX = (a, b, u) => a + (b - a) * u;
+  const uS = sh / Math.max(1, T.yB - T.yT);
+  s += poly([TL, TR, [lerpX(T.xTR, T.xBR, uS), T.yT + sh], [lerpX(T.xTL, T.xBL, uS), T.yT + sh]], 'url(#shadeT)');
+  s += poly([TL, [T.xTL + sh, T.yT], [T.xBL + sh * 0.6, T.yB], BL], 'url(#shadeL)');
+  s += poly([[T.xTR - sh, T.yT], TR, BR, [T.xBR - sh * 0.6, T.yB]], 'url(#shadeR)');
+  // brass corner brackets: an L along both edges of each outer corner plus a rivet
+  const L = 2.4 * R, bw = (2.4 * tr).toFixed(2);
+  const corner = (c, a, b) => {
+    const da = [a[0] - c[0], a[1] - c[1]], db = [b[0] - c[0], b[1] - c[1]];
+    const la = Math.hypot(da[0], da[1]) || 1, lb = Math.hypot(db[0], db[1]) || 1;
+    const pa = [c[0] + da[0] / la * L, c[1] + da[1] / la * L], pb = [c[0] + db[0] / lb * L, c[1] + db[1] / lb * L];
+    return '<polyline points="' + [pa, c, pb].map(p => pt(p[0], p[1])).join(' ') + '" fill="none" style="stroke:var(--brass-soft)" stroke-width="' + bw +
+      '" stroke-linecap="round" stroke-linejoin="round"/><circle cx="' + c[0].toFixed(1) + '" cy="' + c[1].toFixed(1) + '" r="' + (1.8 * tr).toFixed(2) + '" fill="#f5d77a"/>';
+  };
+  const ins = (p, q, k) => [p[0] + (q[0] - p[0]) * k, p[1] + (q[1] - p[1]) * k];
+  // brackets sit just inside the outer corners
+  s += corner(ins(oTL, TL, 0.35), oTR, oBL);
+  s += corner(ins(oTR, TR, 0.35), oTL, oBR);
+  s += corner(ins(oBR, BR, 0.35), oBL, oTR);
+  s += corner(ins(oBL, BL, 0.35), oBR, oTL);
+  return s;
 }
 
 function renderTableBackdropAndSideRacks() {
@@ -3410,7 +3728,7 @@ function renderTableBackdropAndSideRacks() {
   svg.setAttribute('viewBox', '0 0 ' + W + ' ' + H);
   const T = M.trap;
 
-  let out = '';
+  let out = tableRailSvg(T, tableRatio);
 
   // 1. Casino Table Solid Double-Line Trapezoid Border
   const outerPts = [
@@ -3688,7 +4006,7 @@ function toast(msg) {
 
 function assertConservation() {
   const compHands = S.seats.map(s => s.hand);
-  const c = E.checkConservation({ pool: S.pool, board: boardArrays(), playerHand: S.hand, computerHands: compHands });
+  const c = E.checkConservation({ pool: S.pool, board: boardArrays(), playerHand: S.hand, computerHands: compHands }, S.rules);
   if (!c.ok) { console.error('Tile conservation broken', c); toast('內部錯誤：牌數不一致（請回報）'); }
   const overlap = findOverlap();
   if (overlap) { console.error('Groups overlap', overlap); toast('內部錯誤：牌組重疊（請回報）'); }
@@ -3786,7 +4104,7 @@ function tidyTable() {
   const leftRows = Array.from({ length: GRID.rows }, () => ({ nextCol: 0 }));
   let overflowRuns = [];
   runs.forEach(({ g }) => {
-    g.tiles = E.arrangeGroup(g.tiles);
+    if (!orderFits(g.tiles)) g.tiles = E.arrangeGroup(g.tiles);
     const len = g.tiles.length;
     let placed = false;
     for (let r = GRID.rows - 1; r >= 0; r--) {
@@ -3893,6 +4211,7 @@ function removeTiles(sel) {
 function newGame(seed, continueSeries) {
   if (!continueSeries || !S.rules) {
     S.rules = JSON.parse(JSON.stringify(S.config));
+    if (S.rules.useJokers === false) S.rules.sameColorTriple = false;
     const oppCount = Math.max(1, Math.min(3, Number(S.rules.opponents) || 1));
     S.match = {
       totalGames: Math.max(1, Number(S.rules.matchGames) || 3),
@@ -3926,6 +4245,7 @@ function newGame(seed, continueSeries) {
       shownCount: null,
       stall: S.rules.stallStart,
       lastAction: null,
+      drawStreak: 0, // C_4.5.0 (P4): draws in a row, feeds the pattern habit
       oppUnits: 0,
       allowedGroups: new Set(),
       prevSelfCategory: '首手',
@@ -3987,6 +4307,7 @@ function startPlayerTurn() {
   S.coachIds.clear();
   S.errors = [];
   S.deadline = S.rules.timerEnabled ? Date.now() + S.rules.turnSeconds * 1000 : null;
+  S.lastTick = null;
   assertConservation();
   render();
 }
@@ -4005,6 +4326,8 @@ function endTurn() {
     S.errors = res.errors;
     Sound.error();
     render();
+    // C_4.6.0 (F2-5): illegal groups shake once
+    document.querySelectorAll('#boardGroups .group.invalid').forEach(el => el.classList.add('shake'));
     return;
   }
   commitTurn(res, '');
@@ -4054,9 +4377,13 @@ function resetTurn() {
   render();
 }
 
+// C_4.6.0 (F2-5): newly drawn tiles show a "新" tag for FRESH_MS; one re-render then removes it.
+const FRESH_MS = 2000;
 function addDrawnToPlayer(drawn) {
   S.hand = S.hand.concat(drawn);
   drawn.forEach(t => { S.pending.add(t.id); S.arriving.add(t.id); });
+  S.drawnAt = Date.now();
+  setTimeout(() => { if (Date.now() - S.drawnAt >= FRESH_MS) renderRack(); }, FRESH_MS + 40);
 }
 
 function totalPlayerCount() {
@@ -4163,12 +4490,14 @@ function runSeatTurn(game, seatIdx) {
     opponentUnits: units,
     playerGroups: allowedGroups,
     lastAction: seat.lastAction,
+    drawStreak: seat.drawStreak,
     config: S.rules,
   });
 
   recordCpuTurnTelemetry(seat, plan);
   seat.stall = plan.stall;
   seat.lastAction = plan.action;
+  seat.drawStreak = plan.action === 'play' ? 0 : seat.drawStreak + 1;
 
   if (plan.action === 'pass') {
     S.consecutivePasses++;
@@ -4228,7 +4557,8 @@ function runSeatTurn(game, seatIdx) {
     render();
     flyFromSeat(seat.pos, info.flyTiles);
     grabs.forEach(flyGrabbed);
-    setTimeout(step, getSpeedTiming().moveMs);
+    // C_4.6.0 (F5-1): a stage that takes a table tile waits for its ripple before the next stage
+    setTimeout(step, getSpeedTiming().moveMs + (grabs.length ? trailPreMs() : 0));
   };
   step();
 }
@@ -4689,15 +5019,73 @@ function grabBoardTile(id) {
   return { id: id, el: el, rect: r };
 }
 
+// C_4.6.0 (F5-1): a table tile taken by a computer (steal or joker swap) first flashes an amber ripple where it
+// stands, then flies along a golden dashed arc to its new group; the arc fades out 0.4 s after landing.
+// Reduced-motion users get the old straight move without the delay.
+const prefersReducedMotion = () => !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+function trailPreMs() {
+  return prefersReducedMotion() ? 0 : Math.round(getSpeedTiming().flyMs * 0.6);
+}
+function trailLayer() {
+  let svg = document.getElementById('trailLayer');
+  if (!svg) {
+    svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    svg.id = 'trailLayer';
+    svg.innerHTML = '<defs><marker id="trailHead" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse">' +
+      '<path d="M0,0 L10,5 L0,10 z" fill="#ffd76a"/></marker></defs>';
+    document.body.appendChild(svg);
+  }
+  return svg;
+}
 function flyGrabbed(g) {
   const node = document.querySelector('#boardGroups .tile[data-id="' + g.id + '"]');
   if (!g.el || !node) { reveal(g.id); return; }
   const r = node.getBoundingClientRect();
+  const flyMs = getSpeedTiming().flyMs;
+  const pre = trailPreMs();
   document.body.appendChild(g.el);
-  requestAnimationFrame(() => requestAnimationFrame(() => {
-    g.el.style.transform = 'translate(' + (r.left - g.rect.left) + 'px,' + (r.top - g.rect.top) + 'px)';
-  }));
-  setTimeout(() => { g.el.remove(); reveal(g.id); }, getSpeedTiming().flyMs + 30);
+  const dx = r.left - g.rect.left, dy = r.top - g.rect.top;
+  if (!pre) {
+    requestAnimationFrame(() => requestAnimationFrame(() => { g.el.style.transform = 'translate(' + dx + 'px,' + dy + 'px)'; }));
+    setTimeout(() => { g.el.remove(); reveal(g.id); }, flyMs + 30);
+    return;
+  }
+  // arc from the tile's centre to its new place; the control point is lifted above the higher end
+  const x0 = g.rect.left + g.rect.width / 2, y0 = g.rect.top + g.rect.height / 2;
+  const x1 = x0 + dx, y1 = y0 + dy;
+  const lift = Math.max(40, Math.hypot(dx, dy) * 0.35);
+  const cx = (x0 + x1) / 2, cy = Math.min(y0, y1) - lift;
+  const ripple = document.createElement('div');
+  ripple.className = 'take-ripple';
+  ripple.style.left = x0 + 'px';
+  ripple.style.top = y0 + 'px';
+  ripple.style.animationDuration = pre + 'ms';
+  document.body.appendChild(ripple);
+  const layer = trailLayer();
+  const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+  path.setAttribute('d', 'M' + x0.toFixed(1) + ',' + y0.toFixed(1) + ' Q' + cx.toFixed(1) + ',' + cy.toFixed(1) + ' ' + x1.toFixed(1) + ',' + y1.toFixed(1));
+  path.setAttribute('class', 'take-trail');
+  path.setAttribute('marker-end', 'url(#trailHead)');
+  layer.appendChild(path);
+  requestAnimationFrame(() => path.classList.add('on'));
+  const frames = [];
+  for (let k = 0; k <= 12; k++) {
+    const u = k / 12, v = 1 - u;
+    const x = v * v * x0 + 2 * v * u * cx + u * u * x1, y = v * v * y0 + 2 * v * u * cy + u * u * y1;
+    frames.push({ transform: 'translate(' + (x - x0).toFixed(1) + 'px,' + (y - y0).toFixed(1) + 'px) scale(' + (1 + 0.18 * Math.sin(Math.PI * u)).toFixed(3) + ')' });
+  }
+  g.el.style.transition = 'none';
+  setTimeout(() => {
+    ripple.remove();
+    const anim = g.el.animate ? g.el.animate(frames, { duration: flyMs, easing: 'cubic-bezier(.3,.7,.35,1)', fill: 'forwards' }) : null;
+    if (!anim) g.el.style.transform = 'translate(' + dx + 'px,' + dy + 'px)';
+    setTimeout(() => {
+      g.el.remove();
+      reveal(g.id);
+      path.classList.remove('on');
+      setTimeout(() => path.remove(), 420);
+    }, flyMs + 30);
+  }, pre);
 }
 
 // ---------------------------------------------------------------------------
@@ -4725,9 +5113,22 @@ function selectionFormsGroup() {
   return E.analyzeGroup(E.arrangeGroup(selectionTiles()), S.rules).valid;
 }
 
+// C_4.4.0: true when the tiles are already in a legal order: a valid group, or a run fragment whose jokers sit in
+// slots that fit (e.g. [J, R5, R6] or [J, R5]). Such an order is the player's choice and is kept, so a joker can
+// sit at the head of a run instead of always being moved to the tail by arrangeGroup.
+function orderFits(tiles) {
+  if (E.analyzeGroup(tiles, S.rules).valid) return true;
+  const first = tiles.findIndex(t => !t.isJoker);
+  if (first < 0 || !tiles.some(t => t.isJoker)) return false;
+  const start = tiles[first].number - first;
+  return start >= 1 && start + tiles.length - 1 <= 13 &&
+    tiles.every((t, k) => t.isJoker || (t.color === tiles[first].color && t.number === start + k));
+}
+
 // Auto-sorts a board group if arranging it forms a valid run/set or orders same-color distinct tiles ascending
 function autoArrangeGroupTiles(g) {
   if (!g || !g.tiles || g.tiles.length < 2) return;
+  if (orderFits(g.tiles)) return;
   const arranged = E.arrangeGroup(g.tiles);
   if (E.analyzeGroup(arranged, S.rules).valid) {
     g.tiles = arranged;
@@ -4741,8 +5142,10 @@ function autoArrangeGroupTiles(g) {
   }
 }
 
+// tilesA is the group on the left; a combined order that already fits is kept (C_4.4.0, joker at the head).
 function canAutoCoalesceGroups(tilesA, tilesB) {
   const combined = tilesA.concat(tilesB);
+  if (orderFits(combined) && E.analyzeGroup(combined, S.rules).valid) return combined;
   const arranged = E.arrangeGroup(combined);
   if (E.analyzeGroup(arranged, S.rules).valid) return arranged;
   const real = combined.filter(t => !t.isJoker);
@@ -4772,7 +5175,7 @@ function coalesceTouchingBoardGroups(g) {
       const hStart = h.col, hEnd = h.col + h.tiles.length;
       const gap = Math.max(gStart, hStart) - Math.min(gEnd, hEnd);
       if (gap <= 0) {
-        const combinedArranged = canAutoCoalesceGroups(g.tiles, h.tiles);
+        const combinedArranged = gStart <= hStart ? canAutoCoalesceGroups(g.tiles, h.tiles) : canAutoCoalesceGroups(h.tiles, g.tiles);
         if (combinedArranged) {
           g.col = Math.max(0, Math.min(gStart, hStart));
           g.tiles = combinedArranged;
@@ -4936,7 +5339,8 @@ const COLOR_NAME = { red: '紅', blue: '藍', black: '黑', orange: '橘' };
 
 function jokerSvg() {
   return '<svg class="joker-svg" viewBox="0 0 36 36" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">' +
-    '<path d="M7 15 C5 8, 12 6, 18 12 C24 6, 31 8, 29 15" fill="currentColor" fill-opacity="0.14"/>' +
+    '<circle class="jk-ring" cx="18" cy="19.5" r="16.6" stroke-width="1.5" stroke-dasharray="2.2 1.6" opacity="0.9"/>' +
+    '<path d="M7 15 C5 8, 12 6, 18 12 C24 6, 31 8, 29 15" fill="currentColor" fill-opacity="0.22"/>' +
     '<circle cx="6" cy="14" r="1.8" fill="currentColor"/><circle cx="30" cy="14" r="1.8" fill="currentColor"/><circle cx="18" cy="7" r="1.8" fill="currentColor"/>' +
     '<circle cx="18" cy="21" r="10"/>' +
     '<circle cx="14.5" cy="19" r="1.3" fill="currentColor"/><circle cx="21.5" cy="19" r="1.3" fill="currentColor"/>' +
@@ -4975,10 +5379,15 @@ function computeActiveXray() {
   return { extByGroup: extByGroup, matchBoardTileIds: matchBoardTileIds, focusTileId: focusId };
 }
 
-function tileHtml(t, zone, pos, key, xraySet, boardCol) {
+// jokerValue (C_4.6.0, F2-2): the number a table joker stands for in a legal group; shown as a corner badge.
+function tileHtml(t, zone, pos, key, xraySet, boardCol, jokerValue) {
   const cls = ['tile', t.isJoker ? ('c-joker' + (t.id === 'J2' ? ' j-black' : '')) : 'c-' + t.color];
   if (S.selected.has(t.id)) cls.push('sel');
   if (isNewOnBoard(t.id, zone)) cls.push('new');
+  if (zone === 'rack' && S.pending.has(t.id)) {
+    cls.push('pend');
+    if (Date.now() - (S.drawnAt || 0) < FRESH_MS) cls.push('fresh');
+  }
   if (zone && S.arriving.has(t.id)) cls.push('arriving');
   if (zone === 'board' && S.cpuIds.has(t.id)) cls.push('cpu');
   if (zone === 'board' && S.phase === 'player' && isLocked(t.id)) cls.push('locked');
@@ -4989,8 +5398,12 @@ function tileHtml(t, zone, pos, key, xraySet, boardCol) {
   const skewStyle = (zone === 'board' && typeof boardCol === 'number')
     ? ' style="--tile-skew:' + colSkewDeg(boardCol).toFixed(2) + 'deg"'
     : '';
-  const inner = t.isJoker ? jokerSvg() : '<span>' + t.number + '</span>';
-  return '<div class="' + cls.join(' ') + '" data-id="' + t.id + '"' + data + skewStyle + ' title="' + title + '">' + inner + '</div>';
+  const pip = S.config.colorMarks ? '<i class="pip"></i>' : '';
+  const inner = t.isJoker
+    ? jokerSvg() + (typeof jokerValue === 'number' ? '<b class="jk-val">' + jokerValue + '</b>' : '')
+    : pip + '<span>' + t.number + '</span>';
+  const tip = t.isJoker && typeof jokerValue === 'number' ? title + '（代表 ' + jokerValue + '）' : title;
+  return '<div class="' + cls.join(' ') + '" data-id="' + t.id + '"' + data + skewStyle + ' title="' + tip + '">' + inner + '</div>';
 }
 
 function groupLabel(a) {
@@ -5020,7 +5433,10 @@ function renderBoard() {
       html += '<div class="xray-ext" data-xray-key="' + g.key + '" data-xray-pos="0" data-xray-tile="' + xray.focusTileId +
         '" style="left:' + (-rm.cw).toFixed(1) + 'px;--tile-skew:' + colSkewDeg(g.col - 1).toFixed(2) + 'deg" title="點擊直接將手牌接在此牌組前端">＋</div>';
     }
-    g.tiles.forEach((t, i) => { html += tileHtml(t, 'board', i, g.key, xray.matchBoardTileIds, g.col + i); });
+    g.tiles.forEach((t, i) => {
+      const jv = t.isJoker && a.valid && a.values ? a.values[i] : undefined;
+      html += tileHtml(t, 'board', i, g.key, xray.matchBoardTileIds, g.col + i, jv);
+    });
     if (gx && gx.end && g.col + g.tiles.length < GRID.cols) {
       html += '<div class="xray-ext" data-xray-key="' + g.key + '" data-xray-pos="' + g.tiles.length + '" data-xray-tile="' + xray.focusTileId +
         '" style="left:' + (g.tiles.length * rm.cw).toFixed(1) + 'px;--tile-skew:' + colSkewDeg(g.col + g.tiles.length).toFixed(2) + 'deg" title="點擊直接將手牌接在此牌組尾端">＋</div>';
@@ -5046,7 +5462,8 @@ function renderRack() {
     const pending = S.pending.has(t.id);
     if (pending && !inPending) {
       // Item 2: No "新牌" text or dashed line; newly drawn tiles sit separately on the right separated by a clean gap until sorted
-      html += '<span class="slot ' + (i > 0 ? 'gap' : 'tight') + '" data-pos="' + i + '"></span>';
+      // C_4.6.0 (F3-2): the gap holds a brass divider pin.
+      html += '<span class="slot ' + (i > 0 ? 'gap pend-gap' : 'tight') + '" data-pos="' + i + '"></span>';
       inPending = true;
     } else if (i > 0) {
       const key = rackGroupKey(t);
@@ -5506,10 +5923,11 @@ function renderInfo() {
   document.getElementById('infoRules').innerHTML = r
     ? fact('對戰規模', (S.seats.length + 1) + ' 人局｜共 ' + S.match.totalGames + ' 局系列賽') +
       fact('牌池剩餘張數獎勵', (r.poolCountBonus !== false ? '啟用（結算時將牌池剩餘張數加給勝者，每張 +1 分）' : '關閉')) +
-      fact('電腦拆組出牌(2張)', '常駐內建於各角色能力值（學徒 35%｜穩健 85%｜賭徒 90%｜宗師 95%）') +
+      fact('電腦拆組出牌', '一般接牌、開新組做不到時才拆（願意拆組的機率：學徒 35%｜穩健 85%｜賭徒 90%｜宗師 100%）') +
       fact('破冰', r.iceBreakEnabled ? r.iceBreakPoints + ' 點' + (S.hasMelded ? '（已破冰）' : '') : '關閉') +
       fact('思考時間', r.timerEnabled ? r.turnSeconds + ' 秒' : '不限') +
       fact('重設本回合', r.resetPenalty ? '罰摸 ' + r.penaltyDraw + ' 張並結束回合' : '免費') +
+      fact('萬用牌', r.useJokers !== false ? '使用（2 張）' : '不使用（共 104 張）') +
       fact('三同色', r.sameColorTriple ? '啟用' : '關閉')
     : '';
   document.getElementById('log').innerHTML = S.log.slice().reverse().map(l => '<li>' + l + '</li>').join('');
@@ -5529,13 +5947,21 @@ function render() {
   renderStatus();
 }
 
+// C_4.6.0 (F6-2): countdown ring. Amber from 15 s, red and pulsing from 5 s with one tick per second.
+const TIMER_RING_LEN = 2 * Math.PI * 8;
 function updateTimer() {
   const el = document.getElementById('timer');
-  if (!S.deadline || S.phase !== 'player') { el.hidden = true; el.classList.remove('warn'); return; }
+  if (!S.deadline || S.phase !== 'player') { el.hidden = true; el.classList.remove('warn', 'amber'); return; }
   el.hidden = false;
-  const left = Math.max(0, Math.ceil((S.deadline - Date.now()) / 1000));
-  el.textContent = '⏱ ' + left + ' 秒';
-  el.classList.toggle('warn', left <= 10);
+  const msLeft = Math.max(0, S.deadline - Date.now());
+  const left = Math.ceil(msLeft / 1000);
+  const frac = Math.min(1, msLeft / Math.max(1, S.rules.turnSeconds * 1000));
+  el.innerHTML = '<svg class="tring" viewBox="0 0 20 20"><circle class="bg" cx="10" cy="10" r="8"/>' +
+    '<circle class="fg" cx="10" cy="10" r="8" stroke-dasharray="' + TIMER_RING_LEN.toFixed(2) + '" stroke-dashoffset="' + (TIMER_RING_LEN * (1 - frac)).toFixed(2) + '"/></svg>' +
+    '<span>' + left + ' 秒</span>';
+  el.classList.toggle('warn', left <= 5);
+  el.classList.toggle('amber', left > 5 && left <= 15);
+  if (left <= 5 && left > 0 && S.lastTick !== left) { S.lastTick = left; Sound.tick(); }
   if (left === 0) handleTimeout();
 }
 
@@ -5546,7 +5972,8 @@ function fmtPointsCell(totalPts, natPts, jCnt, jPen) {
 
 function resultTileHtml(t, jPen) {
   if (!t.isJoker) return tileHtml(t, null);
-  return '<div class="tile joker"><span class="num">😊</span><span class="joker-pts-tag">' + jPen + '點</span></div>';
+  // C_4.6.0 (F2-4): the same jester icon as on the table instead of an emoji
+  return '<div class="tile joker c-joker' + (t.id === 'J2' ? ' j-black' : '') + '">' + jokerSvg() + '<span class="joker-pts-tag">' + jPen + '點</span></div>';
 }
 
 function renderResult() {
@@ -5773,6 +6200,10 @@ function renderSetup() {
   document.querySelectorAll('#setup [data-out]').forEach(el => { el.textContent = S.config[el.dataset.out]; });
   document.getElementById('rowIce').hidden = !S.config.iceBreakEnabled;
   document.getElementById('rowTimer').hidden = !S.config.timerEnabled;
+  // C_4.4.0: the same-colour triple needs a joker, so it is greyed out and off when jokers are not used.
+  const triple = document.querySelector('#setup [data-cfg="sameColorTriple"]');
+  triple.disabled = !S.config.useJokers;
+  document.getElementById('lblTriple').classList.toggle('off', !S.config.useJokers);
   const rowPW = document.getElementById('rowPenaltyWarn');
   if (rowPW) rowPW.hidden = !S.config.resetPenalty;
   document.getElementById('btnBack').hidden = !(S.phase === 'player' || S.phase === 'computer');
@@ -5839,6 +6270,7 @@ document.getElementById('setup').addEventListener('input', ev => {
   S.config[k] = el.type === 'checkbox' ? el.checked : Number(el.value);
   if (k === 'steal2ProbPct') S.config.steal2Prob = Math.max(0, Math.min(100, Number(S.config.steal2ProbPct) || 0)) / 100;
   if (k === 'steal2Enabled') S.config.masterSteal = !!S.config.steal2Enabled;
+  if (k === 'useJokers' && !S.config.useJokers) S.config.sameColorTriple = false;
   saveConfig();
   renderSetup();
   if ((k === 'showLabels' || k === 'xrayEnabled' || k === 'soundEnabled' || k === 'showDebug' || k === 'showDrawButton' || k === 'showPenaltyWarning' || k === 'showAssistButtons') && S.phase !== 'idle') render();
@@ -6245,6 +6677,35 @@ document.getElementById('btnRedo').onclick = stepRedo;
 document.getElementById('btnTidy').onclick = tidyTable;
 document.getElementById('btnCoach').onclick = triggerCoach;
 window.addEventListener('resize', () => { applyMetrics(); render(); });
+
+// C_4.4.0: full screen. Browsers allow it only after a user gesture, so the first tap, click or key press of the page
+// enters full screen (when the setting is on); the info box button toggles it afterwards. Hidden where
+// the browser has no full-screen support (e.g. iPhone Safari).
+const isFullscreen = () => !!(document.fullscreenElement || document.webkitFullscreenElement);
+function setFullscreen(on) {
+  const el = document.documentElement;
+  const fn = on ? (el.requestFullscreen || el.webkitRequestFullscreen) : (document.exitFullscreen || document.webkitExitFullscreen);
+  if (!fn || on === isFullscreen()) return;
+  try { const p = fn.call(on ? el : document); if (p && p.catch) p.catch(() => {}); } catch (e) { /* ignore */ }
+}
+function updateFullscreenButton() {
+  const btn = document.getElementById('btnFullscreen');
+  const el = document.documentElement;
+  btn.hidden = !(el.requestFullscreen || el.webkitRequestFullscreen);
+  btn.textContent = isFullscreen() ? '⤡ 離開全螢幕' : '⛶ 全螢幕';
+}
+let autoFullscreenTried = false;
+const autoFullscreen = () => {
+  if (autoFullscreenTried) return;
+  autoFullscreenTried = true;
+  if (S.config.autoFullscreen) setFullscreen(true);
+};
+document.addEventListener('pointerdown', ev => { if (!ev.target.closest('#btnFullscreen')) autoFullscreen(); }, true);
+document.addEventListener('keydown', ev => { if (ev.key !== 'Escape') autoFullscreen(); }, true);
+document.addEventListener('fullscreenchange', updateFullscreenButton);
+document.addEventListener('webkitfullscreenchange', updateFullscreenButton);
+document.getElementById('btnFullscreen').onclick = () => { autoFullscreenTried = true; setFullscreen(!isFullscreen()); };
+updateFullscreenButton();
 
 applyMetrics();
 setInterval(updateTimer, 250);
